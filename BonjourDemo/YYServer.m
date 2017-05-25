@@ -39,7 +39,7 @@
     self = [super init];
     if (self) {
         _clients = [[NSMutableSet alloc] init];
-        _clientsDict = [NSMutableDictionary dictionary];
+        _clientsDict = [[NSMutableDictionary alloc] init];
     }
     return self;
 }
@@ -146,7 +146,18 @@
         self.sendTime = [str doubleValue];
         NSLog(@"server发送时间:%@, %d", str, self.index);
     }
+}
+- (void)sendMessage:(NSString *)message toPhone:(NSString *)phoneNumber{
+    Connection *connection = self.clientsDict[phoneNumber];
+    if (connection && message && message.length>0) {
+       // [connection sendNetworkPacket:message];
+        [connection performSelector:@selector(sendNetworkPacket:) onThread:self.thread withObject:message waitUntilDone:NO];
+        NSNumber *str = @([[NSDate date] timeIntervalSince1970]);
+        self.index ++;
+        self.sendTime = [str doubleValue];
+        NSLog(@"server发送时间:%@, %d", str, self.index);
 
+    }
 }
 
 #pragma mark - server delegate
@@ -160,36 +171,60 @@
     //发现新的连接
     connection.delegate = self;
     [self.clients addObject:connection];
-    
 }
 
 #pragma mark - connection delegate
 - (void) connectionAttemptFailed:(Connection *)connection{
+    NSLog(@"学生连接失败: %@, %@", connection.phone, connection.stuName);
     [self.clients removeObject:connection];
+    if (connection.phone) {
+        [self.clientsDict removeObjectForKey:connection.phone];
+    }
+    
 }
 - (void) connectionTerminated:(Connection *)connection
 {
+    NSLog(@"学生断开: %@, %@", connection.phone,  connection.stuName);
     [self.clients removeObject:connection];
+    if (connection.phone) {
+        [self.clientsDict removeObjectForKey:connection.phone];
+    }
+    
 }
 
 - (void) receivedNetworkPacket:(NSString *)packet viaConnection:(Connection *)connection
 {
-    NSLog(@"%@", packet);
+   
     if (packet && packet.length>0) {
         NSData *packetData = [packet dataUsingEncoding:NSUTF8StringEncoding];
         NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:packetData options:NSJSONReadingMutableLeaves error:nil];
         if (dict && ![dict isKindOfClass:[NSNull class]]) {
-            if ([dict[@"packet"][@"header"][@"packet_type"] isEqualToString:@"S2T_3"]) {
+            if ([dict[@"header"][@"packet_type"] isEqualToString:@"S2T_3"]) {
                 //心跳报文处理
-                NSString *phone = dict[@"packet"][@"data"][@"phone"];
+                NSString *phone = dict[@"data"][@"phone"];
                 if (phone) {
-                    [self.clients setValue:connection forKey:phone];
+                    connection.phone = phone;
+                    connection.stuName = dict[@"data"][@"name"];
+                    
+                    Connection *con = self.clientsDict[phone];
+                    if (!con) {
+                       [self.clientsDict setValue:connection forKey:phone];
+                    } else if (connection != con) {
+                        //发下线通知
+                        [con sendNetworkPacket:[self getT2S_8]];
+                        con.delegate = nil;
+                        [con close];
+                        [self.clientsDict removeObjectForKey:phone];
+                        
+                        //存储新的连接
+                        [self.clientsDict setValue:connection forKey:phone];
+                    }
                 }
                 //对学生端心跳进行应答
                 [connection sendNetworkPacket:@""];
-                
-                
+            
             } else {
+                 NSLog(@"%@", packet);
                 //其他报文处理
                 
             }
@@ -202,6 +237,22 @@
     }
 }
 
+- (NSString *)getT2S_8{
+    NSDictionary *header = @{
+                             @"packet_type": @"T2S_8",       //报文类型
+                             @"sender": @"",               //发送方push账号
+                             @"receiver": @"",                 //接收方push账号
+                             @"client_type": @"Mac",          //客户端类型：Android、IOS、Mac、Web、Pusher
+                             @"desc":@"下线通知"                //报文描述
+                             };
+    NSDictionary *data = @{@"message":@"被迫下线, 你的手机号再另一台设备上加入课堂"};
+    NSDictionary *packet = @{@"header": header,
+                             @"data": data};
+    NSData *packetData = [NSJSONSerialization dataWithJSONObject:packet options:NSJSONWritingPrettyPrinted error:nil];
+    NSString *str = [[NSString alloc] initWithData:packetData encoding:NSUTF8StringEncoding];
+    return str;
+
+}
 
 - (void)dealloc
 {

@@ -55,7 +55,9 @@
   NSMutableData* outgoingDataBuffer;
 }
 @property (nonatomic, assign) BOOL writeStreamOpen;
-@property(nonatomic, assign) id<ConnectionDelegate> delegate;
+@property (nonatomic, assign) id<ConnectionDelegate> delegate;
+@property (nonatomic, copy) NSString *phone;
+@property (nonatomic, copy) NSString *stuName;
 
 // Initialize and store connection information until 'connect' is called
 - (id)initWithHostAddress:(NSString*)host andPort:(int)port;

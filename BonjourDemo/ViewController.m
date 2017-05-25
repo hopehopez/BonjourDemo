@@ -13,6 +13,8 @@
 @property (weak, nonatomic) IBOutlet UITextField *textField;
 
 @property (nonatomic, strong) dispatch_source_t timer;
+@property (weak, nonatomic) IBOutlet UITextField *phoneText;
+@property (weak, nonatomic) IBOutlet UITextField *messageText;
 
 @end
 
@@ -43,7 +45,7 @@
         count++;
         if (self.textField.text.length>0) {
             NSString *str = [@([[NSDate date] timeIntervalSince1970]) stringValue];
-            [[YYServer shareInsatance] sendMessage: str];
+            [[YYServer shareInsatance] sendMessage: self.textField.text];
 //            [self.server sendMessage:self.textField.text];
         }
 
@@ -55,7 +57,7 @@
     });
     
     // 启动定时器
-    dispatch_resume(self.timer);
+   // dispatch_resume(self.timer);
     
 }
 - (IBAction)stopClick:(id)sender {
@@ -74,5 +76,12 @@
 
 }
 
+- (IBAction)singleSend:(id)sender {
+    
+    if (self.phoneText.text.length>0 && self.messageText.text.length>0) {
+        [[YYServer shareInsatance] sendMessage:self.messageText.text toPhone:self.phoneText.text];
+    }
+    
+}
 
 @end

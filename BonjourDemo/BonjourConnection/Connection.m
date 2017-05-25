@@ -88,11 +88,11 @@ void writeStreamEventHandler(CFWriteStreamRef stream, CFStreamEventType eventTyp
 }
 
 // Initialize and store connection information until 'connect' is called
-- (id)initWithHostAddress:(NSString*)_host andPort:(int)_port {
+- (id)initWithHostAddress:(NSString*)_host andPort:(int)_port1 {
     [self clean];
     
     self.host = _host;
-    self.port = _port;
+    self.port = _port1;
     return self;
 }
 

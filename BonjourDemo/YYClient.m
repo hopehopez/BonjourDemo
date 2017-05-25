@@ -105,7 +105,7 @@
 - (void)startHeart{
     __block typeof(self) weakself = self;
     self.lastTime = [[NSDate date] timeIntervalSince1970];
-    NSTimer *timer = [NSTimer scheduledTimerWithTimeInterval:1 repeats:YES block:^(NSTimer * _Nonnull timer) {
+    NSTimer *timer = [NSTimer scheduledTimerWithTimeInterval:2.0 repeats:YES block:^(NSTimer * _Nonnull timer) {
         double currentTime = [[NSDate date] timeIntervalSince1970];
         double t = currentTime - weakself.lastTime;
         if (t>5) { //超过五秒没收到心跳消息, 重新查找服务
